@@ -1,6 +1,4 @@
-use std::result;
-
-use api::{create_api_key, delete_api_key, validate_user};
+use api::{create_api_key, delete_api_key, perform_api_fn, validate_user};
 use library::handle_rejection;
 use warp::Filter;
 
@@ -36,7 +34,15 @@ async fn  main() {
         }
     });
 
-   let routes = validate_user_route.or(create_api_key).or(delete_api_key);
+    let perform_api_function = warp::path!("add" / i32 / i32 / String / String).and(warp::get())
+    .and_then(|a: i32, b: i32, username: String, api_key: String| async move {
+        match perform_api_fn(a, b, &username, &api_key).await {
+            Ok(result) => Ok::<_, warp::Rejection>(warp::reply::json(&result)),
+            Err(e) => Err(warp::reject::custom(e))
+        }
+    });
+
+   let routes = validate_user_route.or(create_api_key).or(delete_api_key).or(perform_api_function);
    warp::serve(routes).run(([127, 0, 0, 1], 3031)).await;
    
 }

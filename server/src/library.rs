@@ -25,6 +25,7 @@ pub struct Log {
 }
 
 
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReturnMessage{
     pub status_code: u16,
@@ -46,6 +47,12 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
     };
 
     Ok(warp::reply::json(&return_message))
+}
+
+
+// API FUNCTION
+pub fn addition(a: i32, b: i32) -> i32 {
+    a + b
 }
 
 

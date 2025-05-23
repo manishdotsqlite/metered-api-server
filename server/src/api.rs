@@ -1,4 +1,6 @@
-use crate::{library::{ReturnMessage, User}, sql::{connect_db, execute_sql, get_number_of_apis}};
+use chrono::Utc;
+use warp::filters::log::log;
+use crate::{library::{addition, Log, ReturnMessage, User}, sql::{connect_db, execute_sql, get_number_of_apis}};
 use rand::{distr::Alphanumeric, Rng};
 
 pub async fn validate_user(username: &str) -> Result<ReturnMessage, ReturnMessage>{
@@ -90,4 +92,42 @@ pub async fn delete_api_key(username: &str, api_key: &str) -> Result<ReturnMessa
             data: None
         })
     };
+}
+
+
+pub async fn perform_api_fn(a: i32, b: i32, username: &str, api_key: &str) -> Result<ReturnMessage, ReturnMessage> {
+
+    let limit: i32 = 50;
+    let conn = match connect_db().await {
+        Ok(s) => s,
+        Err(s) => return Err(ReturnMessage{status_code: 501,
+            message: s.to_owned(),
+            data: None
+            })
+    };
+
+    let now = Utc::now();
+    let utc_seconds = now.timestamp();
+
+    let count = format!("SELECT COUNT(*) AS log_count FROM log WHERE key = '{}' AND use_time >= {}", api_key, utc_seconds - 3600);
+    let log_count: (i64, ) =  sqlx::query_as(&count).fetch_one(&conn).await.unwrap();
+
+    if log_count.0 >= limit as i64 {
+        return Err(ReturnMessage { status_code: 1001, message: "RATE LIMIT REACHED.".to_owned(), data: None }) ;
+    }
+
+    let result = format!("{}", addition(a, b));
+
+    //updation 
+    let update_api_table = format!("UPDATE api_keys SET use_count = use_count + 1 WHERE username = '{}'  AND key = '{}'", username, api_key);
+    let update_log_table = format!("INSERT into log (key, use_time) VALUES ('{}', {})", api_key, utc_seconds);
+
+    let _ = execute_sql(&update_api_table).await;
+    let _ = execute_sql(&update_log_table).await;
+
+    Ok(ReturnMessage {
+        status_code: 1000,
+        message: "API Called.".to_owned(),
+        data: Some(result)
+    })
 }
