@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use sqlx::{sqlite, Executor, Pool, Sqlite};
 
 pub async fn connect_db() -> Result<Pool<Sqlite>, &'static str> {
@@ -77,6 +79,17 @@ pub async fn add_user(username: &str) -> Result<(), &'static str> {
         Ok(_) => return Ok(()),
         Err(_) => return Err("Couldn't store user.")
     };
+}
+
+
+pub async fn get_number_of_apis(username: &str) -> Result<i32, &'static str> {
+    let conn = match connect_db().await {
+        Ok(s) => s,
+        Err(s) => return Err(s)
+    };
+    let query = format!("SELECT COUNT(*) AS count FROM api_keys WHERE username='{}'", username);
+    let count: (i32, ) = sqlx::query_as(&query).fetch_one(&conn).await.unwrap();
+    Ok(count.0)
 }
 
 
