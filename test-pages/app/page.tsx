@@ -1,5 +1,6 @@
-import * as React from "react"
+"use client";
 
+import * as React from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -17,10 +18,33 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Info, InfoIcon } from "lucide-react"
+import { InfoIcon } from "lucide-react"
+import axios from "axios";
+import { toast, Toaster } from "sonner"
+import { setSecureCookie } from "@/lib/cookie-utils";
+import { useRouter } from "next/navigation";
 
-export default function CardWithForm() {
+
+export default function Login() {
+  const [username, setUsername] = React.useState<string>("");
+  const router = useRouter();
+
+  const onSubmit = async () => {
+      const validation = await axios.get(`http://127.0.0.1:3031/validate/${username}`);
+      const ssun = await validation.data.data;
+      if (ssun === username) {
+        setSecureCookie('username', ssun, 7);
+        toast.success("You have been logged in.");
+        router.push("/test");
+        return;
+      } else {
+        toast.error("Credentials are incorrect.");
+        return;
+      }
+  }
+
   return (
+    <>
     <Card className="w-[350px]">
       <CardHeader>
         <CardTitle>Enter username.</CardTitle>
@@ -38,19 +62,20 @@ export default function CardWithForm() {
                     <InfoIcon size={18}/>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Use username "manish".</p>
+                    <p>Use username &quot;manish&quot;.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider></div>
               
-              <Input id="name" placeholder="manish" />
+              <Input id="name" placeholder="manish" value={username} onChange={(e) => setUsername(e.target.value)}/>
             </div>
           </div>
         </form>
       </CardContent>
       <CardFooter className="flex justify-end">
-        <Button>Enter</Button>
+        <Button onClick={onSubmit}>Enter</Button>
       </CardFooter>
-    </Card>
+    </Card><Toaster /></>
+    
   )
 }
