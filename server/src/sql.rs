@@ -15,7 +15,10 @@ pub async fn create_user_table() -> Result<(), &'static str> {
         Err(s) => return Err(s)
     };
 
-    let sql = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL)";
+    let sql = "CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL
+                    )";
     let _ = match conn.execute(sql).await {
         Ok(_) => return Ok(()),
         Err(_) => return Err("Couldn't create users table. ")
@@ -53,6 +56,28 @@ pub async fn create_log_table() -> Result<(), &'static str> {
     };
 }
 
+
+
+pub async fn execute_sql(sql: &str) -> Result<(), &'static str> {
+    let conn = match connect_db().await {
+        Ok(s) => s,
+        Err(s) => return Err(s)
+    };
+
+    let _ = match conn.execute(sql).await {
+        Ok(_) => return Ok(()),
+        Err(_) => return Err("Couldn't execute sql.")
+    };
+}
+
+
+pub async fn add_user(username: &str) -> Result<(), &'static str> {
+    let sql = format!("INSERT INTO USERS (username) VALUES ('{}')", username);
+    let _ = match execute_sql(&sql).await {
+        Ok(_) => return Ok(()),
+        Err(_) => return Err("Couldn't store user.")
+    };
+}
 
 
 
