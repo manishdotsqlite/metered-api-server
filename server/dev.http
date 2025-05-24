@@ -1,1 +1,1 @@
-GET http://127.0.0.1:3031/add/12/12/manish/Dz0lDhf6ghBO1TaAZpwhOLpHTLaO9kOF
+GET http://127.0.0.1:3031/create-api-key/manish

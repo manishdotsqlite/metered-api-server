@@ -1,6 +1,5 @@
 use chrono::Utc;
-use warp::filters::log::log;
-use crate::{library::{addition, Log, ReturnMessage, User}, sql::{connect_db, execute_sql, get_number_of_apis}};
+use crate::{library::{addition, ReturnMessage, User}, sql::{connect_db, execute_sql, get_number_of_apis}};
 use rand::{distr::Alphanumeric, Rng};
 
 pub async fn validate_user(username: &str) -> Result<ReturnMessage, ReturnMessage>{
@@ -37,26 +36,36 @@ fn generate_api_key() -> String {
 }
 
 pub async fn create_api_key(username: &str) -> Result<ReturnMessage, ReturnMessage> {
-    let _ = match validate_user(username).await {
-        Ok(_) => (),
+    let success_message= match validate_user(username).await {
+        Ok(s) => s,
         Err(e) => return Err(e)
     };
 
-    match  get_number_of_apis(username).await {
-        Ok(s) => {
-            if s > 5 {
-                return Err(ReturnMessage {
-                    status_code: 102, 
-                    message: "Generation exceeds count of 5".to_owned(),
-                    data: None
-                });
-            } 
-        },
-        Err(s) => return Err(ReturnMessage {
-            status_code: 103, 
-            message: s.to_owned(),
+    if success_message.data.is_none() {
+        return Err(ReturnMessage {
+            status_code: 001,
+            message: "User not found.".to_owned(),
             data: None
-        })
+        });
+    }
+
+    println!("Creating API key for user: {}", username);
+
+    let number_of_apis = match get_number_of_apis(&username).await {
+        Ok(s) => s,
+        Err(_) => return Err( ReturnMessage {
+            status_code: 001,
+            message: "Couldn't reterieve number of apis.".to_owned(),
+            data: None
+        } )
+    };
+
+    if number_of_apis > 5 {
+        return Err( ReturnMessage {
+            status_code: 001,
+            message: "Number of API generation exceeded.".to_owned(),
+            data: None
+        } )
     }
 
     let new_key = generate_api_key();

@@ -1,6 +1,10 @@
+use std::convert::Infallible;
+
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use warp::{reject::{Reject, Rejection}, reply::Reply};
+use warp::reply::json;
+use warp::http::StatusCode;
 
 
 #[derive(Debug, FromRow)]
@@ -34,20 +38,34 @@ pub struct ReturnMessage{
 }
 
 impl Reject for ReturnMessage {}
-
-pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
-    let return_message = if let Some(custom_error) = err.find::<ReturnMessage>() {
-        custom_error
+pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
+    if let Some(return_message) = err.find::<ReturnMessage>() {
+        // Handle custom ReturnMessage error
+        Ok(warp::reply::with_status(json(return_message), StatusCode::BAD_REQUEST))
+    } else if err.is_not_found() {
+        let msg = ReturnMessage {
+            status_code: StatusCode::NOT_FOUND.as_u16(),
+            message: "Not Found".to_string(),
+            data: None,
+        };
+        Ok(warp::reply::with_status(json(&msg), StatusCode::NOT_FOUND))
+    } else if let Some(_) = err.find::<warp::reject::MethodNotAllowed>() {
+        let msg = ReturnMessage {
+            status_code: StatusCode::METHOD_NOT_ALLOWED.as_u16(),
+            message: "Method Not Allowed".to_string(),
+            data: None,
+        };
+        Ok(warp::reply::with_status(json(&msg), StatusCode::METHOD_NOT_ALLOWED))
     } else {
-        & ReturnMessage {
-            status_code: 500,
-            message: "Internal server error.".to_owned(),
-            data: None
-        }
-    };
-
-    Ok(warp::reply::json(&return_message))
+        let msg = ReturnMessage {
+            status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            message: "Internal Server Error".to_string(),
+            data: None,
+        };
+        Ok(warp::reply::with_status(json(&msg), StatusCode::INTERNAL_SERVER_ERROR))
+    }
 }
+
 
 
 // API FUNCTION
